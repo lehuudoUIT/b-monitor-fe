@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { User, LogOut, ChevronDown } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const Header = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { user, logout } = useAuth();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -18,8 +20,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    console.log("Logout clicked");
-    // Add logout logic here
+    logout();
   };
 
   return (
@@ -48,8 +49,10 @@ const Header = () => {
 
           {/* User Info */}
           <div className="text-left hidden md:block">
-            <p className="text-sm font-medium text-cosmic-text">Admin User</p>
-            <p className="text-xs text-cosmic-text-dim">admin@bmonitor.com</p>
+            <p className="text-sm font-medium text-cosmic-text">
+              {user?.full_name || user?.username || "User"}
+            </p>
+            <p className="text-xs text-cosmic-text-dim">{user?.email || ""}</p>
           </div>
 
           {/* Dropdown Icon */}
@@ -64,9 +67,11 @@ const Header = () => {
         {isDropdownOpen && (
           <div className="absolute right-0 mt-2 w-56 cosmic-card py-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="px-4 py-3 border-b border-cosmic-purple-light/20">
-              <p className="text-sm font-medium text-cosmic-text">Admin User</p>
+              <p className="text-sm font-medium text-cosmic-text">
+                {user?.full_name || user?.username || "User"}
+              </p>
               <p className="text-xs text-cosmic-text-dim mt-1">
-                admin@bmonitor.com
+                {user?.email || ""}
               </p>
             </div>
 

@@ -7,21 +7,38 @@ import { toast } from 'react-toastify';
  * Authentication APIs
  */
 export const authAPI = {
+  // Register
+  register: async (userData) => {
+    try {
+      const response = await axiosInstance.post('/auth/register', userData);
+      toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Đăng ký thất bại';
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
   // Login
   login: async (credentials) => {
     try {
       const response = await axiosInstance.post('/auth/login', credentials);
       
       // Save token to localStorage
-      if (response.data.token) {
-        localStorage.setItem('accessToken', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (response.data.access_token) {
+        localStorage.setItem('accessToken', response.data.access_token);
       }
       
-      toast.success('Login successful!');
+      toast.success('Đăng nhập thành công!');
       return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Đăng nhập thất bại';
+      toast.error(errorMessage);
       throw error;
     }
   },
@@ -30,16 +47,19 @@ export const authAPI = {
   logout: () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    toast.info('Logged out successfully');
+    toast.info('Đã đăng xuất');
   },
 
   // Get current user
   getCurrentUser: async () => {
     try {
-      const response = await axiosInstance.get('/auth/me');
+      const response = await axiosInstance.get('/users/me');
       return response.data;
     } catch (error) {
-      toast.error('Failed to get user info');
+      if (error.response?.status === 403) {
+        localStorage.removeItem('accessToken');
+      }
+      toast.error('Không thể lấy thông tin người dùng');
       throw error;
     }
   },

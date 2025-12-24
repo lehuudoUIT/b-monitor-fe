@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { Eye, EyeOff, Lock, Mail, Zap } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, Zap } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 
-const Login = () => {
-  const [showPassword, setShowPassword] = useState(false);
+const Register = () => {
   const [formData, setFormData] = useState({
     username: "",
+    email: "",
     password: "",
+    full_name: "",
   });
-  const { login, loading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const { register, loading } = useAuth();
 
   const handleChange = (e) => {
     setFormData({
@@ -20,7 +22,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(formData);
+    await register(formData);
   };
 
   return (
@@ -35,7 +37,7 @@ const Login = () => {
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-glow-purple rounded-full blur-3xl opacity-10 animate-pulse-glow"></div>
       </div>
 
-      {/* Login Card */}
+      {/* Register Card */}
       <div className="cosmic-card w-full max-w-md p-8 relative z-10">
         {/* Logo/Header */}
         <div className="text-center mb-8">
@@ -43,15 +45,13 @@ const Login = () => {
             <Zap className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gradient-purple mb-2">
-            B-Monitor
+            Create Account
           </h1>
-          <p className="text-cosmic-text-dim">
-            Traffic Camera Management System
-          </p>
+          <p className="text-cosmic-text-dim">Join B-Monitor System</p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Register Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username Field */}
           <div className="space-y-2">
             <label
@@ -61,14 +61,60 @@ const Login = () => {
               Username
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cosmic-text-dim" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cosmic-text-dim" />
               <input
                 id="username"
                 name="username"
                 type="text"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="admin"
+                placeholder="johndoe"
+                className="cosmic-input w-full pl-11"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Full Name Field */}
+          <div className="space-y-2">
+            <label
+              htmlFor="full_name"
+              className="block text-sm font-medium text-cosmic-text"
+            >
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cosmic-text-dim" />
+              <input
+                id="full_name"
+                name="full_name"
+                type="text"
+                value={formData.full_name}
+                onChange={handleChange}
+                placeholder="John Doe"
+                className="cosmic-input w-full pl-11"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-cosmic-text"
+            >
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cosmic-text-dim" />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="john@example.com"
                 className="cosmic-input w-full pl-11"
                 required
               />
@@ -109,27 +155,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="checkbox"
-                className="w-4 h-4 rounded border-cosmic-purple-light/30 bg-cosmic-darker/50 
-                         checked:bg-cosmic-purple checked:border-cosmic-purple
-                         focus:ring-2 focus:ring-cosmic-purple/50 focus:ring-offset-0 transition-all"
-              />
-              <span className="text-cosmic-text-dim group-hover:text-cosmic-text transition-colors">
-                Remember me
-              </span>
-            </label>
-            <a
-              href="#"
-              className="text-cosmic-cyan hover:text-cosmic-cyan-light transition-colors"
-            >
-              Forgot password?
-            </a>
-          </div>
-
           {/* Submit Button */}
           <Button
             type="submit"
@@ -137,46 +162,18 @@ const Login = () => {
             className="w-full"
             loading={loading}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating Account..." : "Create Account"}
           </Button>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-cosmic-purple-light/20"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-cosmic-dark text-cosmic-text-dim">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          {/* Alternative Login Options */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" size="sm" className="w-full">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
-              </svg>
-              Google
-            </Button>
-            <Button variant="outline" size="sm" className="w-full">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-              </svg>
-              GitHub
-            </Button>
-          </div>
         </form>
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-cosmic-text-dim">
-          Don't have an account?{" "}
+          Already have an account?{" "}
           <a
-            href="#"
+            href="/login"
             className="text-cosmic-purple hover:text-cosmic-purple-light transition-colors font-medium"
           >
-            Sign up
+            Sign in
           </a>
         </div>
       </div>
@@ -187,4 +184,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
