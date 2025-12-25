@@ -1,5 +1,11 @@
 import React from "react";
-import { LayoutDashboard, BarChart3, Settings, Activity } from "lucide-react";
+import {
+  LayoutDashboard,
+  BarChart3,
+  Settings,
+  Activity,
+  Video,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
@@ -8,6 +14,11 @@ const Sidebar = () => {
       icon: LayoutDashboard,
       label: "Dashboard",
       path: "/dashboard",
+    },
+    {
+      icon: Video,
+      label: "Local Video",
+      path: "/local-video",
     },
     {
       icon: BarChart3,

@@ -13,6 +13,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CameraDetail from "./pages/CameraDetail";
 import Analytics from "./pages/Analytics";
+import LocalVideo from "./pages/LocalVideo";
+import VideoDetail from "./pages/VideoDetail";
 import MainLayout from "./layouts/MainLayout";
 import "./App.css";
 
@@ -47,6 +49,30 @@ function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <CameraDetail />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Local Video Route */}
+            <Route
+              path="/local-video"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <LocalVideo />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Video Detail Route */}
+            <Route
+              path="/video/:videoId"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <VideoDetail />
                   </MainLayout>
                 </ProtectedRoute>
               }
