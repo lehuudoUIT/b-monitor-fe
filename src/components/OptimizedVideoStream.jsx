@@ -36,6 +36,9 @@ const OptimizedVideoStream = ({ cameraId }) => {
   const [videoType, setVideoType] = useState("video/mp4");
   const [isLoadingAnomalies, setIsLoadingAnomalies] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
 
   // No fetch interval - render every frame
   const FETCH_INTERVAL = 1;
@@ -294,17 +297,49 @@ const OptimizedVideoStream = ({ cameraId }) => {
       }
     };
 
+    const handleTimeUpdate = () => {
+      if (!isSeeking) {
+        setCurrentTime(video.currentTime);
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+    };
+
+    const handleSeeked = () => {
+      // Redraw bbox after seek completes
+      const frame = getCurrentFrame();
+      setCurrentFrame(frame);
+      const frameAnomalies = anomaliesByFrameRef.current.get(frame) || [];
+      drawBoundingBoxes(frameAnomalies);
+
+      // Restart animation if video is playing
+      if (!video.paused) {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("seeked", handleSeeked);
 
     return () => {
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("seeked", handleSeeked);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [animate]);
+  }, [animate, isSeeking, getCurrentFrame, drawBoundingBoxes]);
 
   // Sync canvas size with video container
   useEffect(() => {
@@ -390,6 +425,32 @@ const OptimizedVideoStream = ({ cameraId }) => {
     }
   };
 
+  const handleSeek = (e) => {
+    if (!videoRef.current || !duration) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    const newTime = pos * duration;
+
+    videoRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handleSeekStart = () => {
+    setIsSeeking(true);
+  };
+
+  const handleSeekEnd = () => {
+    setIsSeeking(false);
+  };
+
+  const formatTime = (seconds) => {
+    if (isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div className="space-y-4">
       {/* Video Container */}
@@ -413,6 +474,37 @@ const OptimizedVideoStream = ({ cameraId }) => {
 
           {/* Controls Overlay */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-cosmic-deep/90 via-cosmic-deep/50 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Progress Bar */}
+            <div className="mb-3">
+              <div
+                className="relative h-1.5 bg-cosmic-darker/50 rounded-full cursor-pointer group/progress"
+                onClick={handleSeek}
+                onMouseDown={handleSeekStart}
+                onMouseUp={handleSeekEnd}
+              >
+                {/* Loaded progress */}
+                <div
+                  className="absolute inset-y-0 left-0 bg-cosmic-purple/30 rounded-full"
+                  style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                />
+                {/* Current progress */}
+                <div
+                  className="absolute inset-y-0 left-0 bg-cosmic-purple rounded-full"
+                  style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                />
+                {/* Hover indicator */}
+                <div className="absolute inset-0 opacity-0 group-hover/progress:opacity-100 transition-opacity">
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg"
+                    style={{
+                      left: `${(currentTime / duration) * 100 || 0}%`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               {/* Play/Pause */}
               <button
@@ -441,6 +533,11 @@ const OptimizedVideoStream = ({ cameraId }) => {
               {/* Frame Counter */}
               <div className="text-sm text-cosmic-text-dim">
                 Frame: {currentFrame}
+              </div>
+
+              {/* Time Display */}
+              <div className="text-sm text-cosmic-text-dim">
+                {formatTime(currentTime)} / {formatTime(duration)}
               </div>
 
               {/* Playback Speed */}
