@@ -51,20 +51,11 @@ export const videoAPI = {
     }
   },
 
-  // Get video stream URL (without token in query)
-  getStreamUrl: (cameraId) => {
-    const baseURL = axiosInstance.defaults.baseURL;
-    // Ensure proper URL formation with /
-    const url = baseURL.endsWith('/') 
-      ? `${baseURL}cameras/${cameraId}/stream/`
-      : `${baseURL}/cameras/${cameraId}/stream/`;
-    return url;
-  },
 
   // Get frame metadata
   getFrameMetadata: async (frameId, cameraId) => {
     try {
-      const response = await axiosInstance.get(`/anomalies/frame/${frameId}` , {
+          const response = await axiosInstance.get(`/anomalies/frame/${frameId}` , {
         params: { camera_id: cameraId },
       });
       return response.data;
@@ -74,4 +65,17 @@ export const videoAPI = {
       throw error;
     }
   },
-};
+
+  // Get all anomalies for a camera
+  getAllAnomalies: async (cameraId, order = 'asc') => {
+    try {
+      const response = await axiosInstance.get(`/anomalies/camera/${cameraId}`, {
+        params: { order },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch anomalies:', error);
+      throw error;
+    }
+  },
+}

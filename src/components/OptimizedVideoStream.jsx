@@ -25,21 +25,20 @@ const OptimizedVideoStream = ({ cameraId }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  const metadataCacheRef = useRef(new Map());
-  const lastFetchedFrameRef = useRef(-1);
+  const anomaliesByFrameRef = useRef(new Map()); // Map<frameId, anomalies[]>
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [videoInfo, setVideoInfo] = useState(null);
-  const [currentMetadata, setCurrentMetadata] = useState([]);
   const [videoSrc, setVideoSrc] = useState(null);
   const [videoType, setVideoType] = useState("video/mp4");
+  const [isLoadingAnomalies, setIsLoadingAnomalies] = useState(true);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
-  // Fetch interval: fetch metadata every N frames
-  const FETCH_INTERVAL = 5; // Fetch every 5 frames
-  const METADATA_CACHE_SIZE = 100; // Cache up to 100 frames
+  // No fetch interval - render every frame
+  const FETCH_INTERVAL = 1;
 
   // Load video stream with Authorization header
   useEffect(() => {
@@ -49,9 +48,7 @@ const OptimizedVideoStream = ({ cameraId }) => {
       try {
         const token = localStorage.getItem("accessToken");
         const baseURL = axiosInstance.defaults.baseURL;
-        const url = baseURL.endsWith("/")
-          ? `${baseURL}cameras/${cameraId}/stream/`
-          : `${baseURL}/cameras/${cameraId}/stream/`;
+        const url = `${baseURL}cameras/${cameraId}/stream/`;
 
         // Use fetch API for better blob handling
         const response = await fetch(url, {
@@ -92,6 +89,39 @@ const OptimizedVideoStream = ({ cameraId }) => {
     };
   }, [cameraId]);
 
+  // Load all anomalies for this camera once
+  useEffect(() => {
+    const loadAllAnomalies = async () => {
+      setIsLoadingAnomalies(true);
+      try {
+        const data = await videoAPI.getAllAnomalies(cameraId);
+        const anomalies = data.items || [];
+
+        // Organize anomalies by frame_id
+        const byFrame = new Map();
+        anomalies.forEach((anomaly) => {
+          const frameId = anomaly.frame_id;
+          if (!byFrame.has(frameId)) {
+            byFrame.set(frameId, []);
+          }
+          byFrame.get(frameId).push(anomaly);
+        });
+
+        anomaliesByFrameRef.current = byFrame;
+        console.log(
+          `Loaded ${anomalies.length} anomalies across ${byFrame.size} frames`
+        );
+      } catch (error) {
+        console.error("Failed to load anomalies:", error);
+        anomaliesByFrameRef.current = new Map();
+      } finally {
+        setIsLoadingAnomalies(false);
+      }
+    };
+
+    loadAllAnomalies();
+  }, [cameraId]);
+
   // Load video info
   useEffect(() => {
     const loadVideoInfo = async () => {
@@ -112,36 +142,6 @@ const OptimizedVideoStream = ({ cameraId }) => {
     const fps = videoInfo.fps || 30;
     return Math.floor(videoRef.current.currentTime * fps);
   }, [videoInfo]);
-
-  // Fetch metadata for a specific frame
-  const fetchFrameMetadata = useCallback(
-    async (frameId) => {
-      // Check cache first
-      if (metadataCacheRef.current.has(frameId)) {
-        return metadataCacheRef.current.get(frameId);
-      }
-
-      try {
-        const response = await videoAPI.getFrameMetadata(frameId, cameraId);
-        const metadata = response.items || [];
-
-        // Update cache
-        metadataCacheRef.current.set(frameId, metadata);
-
-        // Limit cache size
-        if (metadataCacheRef.current.size > METADATA_CACHE_SIZE) {
-          const firstKey = metadataCacheRef.current.keys().next().value;
-          metadataCacheRef.current.delete(firstKey);
-        }
-
-        return metadata;
-      } catch (error) {
-        // Silent fail - return empty array
-        return [];
-      }
-    },
-    [cameraId]
-  );
 
   // Draw bounding boxes on canvas
   const drawBoundingBoxes = useCallback(
@@ -167,9 +167,29 @@ const OptimizedVideoStream = ({ cameraId }) => {
         return;
       }
 
-      // Calculate scale factors
-      const scaleX = canvas.width / video.videoWidth;
-      const scaleY = canvas.height / video.videoHeight;
+      // Calculate actual video display dimensions (accounting for object-fit: contain)
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const canvasAspect = canvas.width / canvas.height;
+
+      let renderWidth, renderHeight, offsetX, offsetY;
+
+      if (videoAspect > canvasAspect) {
+        // Video is wider - fit to width
+        renderWidth = canvas.width;
+        renderHeight = canvas.width / videoAspect;
+        offsetX = 0;
+        offsetY = (canvas.height - renderHeight) / 2;
+      } else {
+        // Video is taller - fit to height
+        renderHeight = canvas.height;
+        renderWidth = canvas.height * videoAspect;
+        offsetX = (canvas.width - renderWidth) / 2;
+        offsetY = 0;
+      }
+
+      // Calculate scale factors based on actual render size
+      const scaleX = renderWidth / video.videoWidth;
+      const scaleY = renderHeight / video.videoHeight;
 
       metadata.forEach((item) => {
         try {
@@ -186,9 +206,9 @@ const OptimizedVideoStream = ({ cameraId }) => {
 
           const [x1, y1, x2, y2] = coords;
 
-          // Scale coordinates
-          const scaledX = x1 * scaleX;
-          const scaledY = y1 * scaleY;
+          // Scale coordinates and apply offset
+          const scaledX = x1 * scaleX + offsetX;
+          const scaledY = y1 * scaleY + offsetY;
           const scaledWidth = (x2 - x1) * scaleX;
           const scaledHeight = (y2 - y1) * scaleY;
 
@@ -245,32 +265,17 @@ const OptimizedVideoStream = ({ cameraId }) => {
     const frame = getCurrentFrame();
     setCurrentFrame(frame);
 
-    // Only fetch metadata if video is playing and frame > 0
-    if (
-      frame > 0 &&
-      frame !== lastFetchedFrameRef.current &&
-      frame % FETCH_INTERVAL === 0
-    ) {
-      lastFetchedFrameRef.current = frame;
+    // Get anomalies for current frame from pre-loaded data
+    const frameAnomalies = anomaliesByFrameRef.current.get(frame) || [];
 
-      fetchFrameMetadata(frame)
-        .then((metadata) => {
-          setCurrentMetadata(metadata || []);
-        })
-        .catch((error) => {
-          console.error("Error fetching metadata for frame", frame, error);
-          // Don't update metadata on error - keep previous
-        });
-    }
-
-    // Draw current metadata
-    drawBoundingBoxes(currentMetadata);
+    // Draw bounding boxes for current frame
+    drawBoundingBoxes(frameAnomalies);
 
     // Continue animation
     if (videoRef.current && !videoRef.current.paused) {
       animationRef.current = requestAnimationFrame(animate);
     }
-  }, [getCurrentFrame, fetchFrameMetadata, drawBoundingBoxes, currentMetadata]);
+  }, [getCurrentFrame, drawBoundingBoxes]);
 
   // Handle video play/pause
   useEffect(() => {
@@ -301,7 +306,7 @@ const OptimizedVideoStream = ({ cameraId }) => {
     };
   }, [animate]);
 
-  // Sync canvas size with video
+  // Sync canvas size with video container
   useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -309,17 +314,29 @@ const OptimizedVideoStream = ({ cameraId }) => {
     if (!video || !canvas) return;
 
     const syncCanvasSize = () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      drawBoundingBoxes(currentMetadata);
+      // Set canvas size to match the video element's display size (container)
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      // Draw current frame's anomalies after canvas resize
+      const frame = getCurrentFrame();
+      const frameAnomalies = anomaliesByFrameRef.current.get(frame) || [];
+      drawBoundingBoxes(frameAnomalies);
     };
 
+    // Sync on metadata load and window resize
     video.addEventListener("loadedmetadata", syncCanvasSize);
+    window.addEventListener("resize", syncCanvasSize);
+
+    // Initial sync
+    syncCanvasSize();
 
     return () => {
       video.removeEventListener("loadedmetadata", syncCanvasSize);
+      window.removeEventListener("resize", syncCanvasSize);
     };
-  }, [drawBoundingBoxes, currentMetadata]);
+  }, [drawBoundingBoxes, getCurrentFrame]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -342,7 +359,9 @@ const OptimizedVideoStream = ({ cameraId }) => {
     setShowOverlay(!showOverlay);
     if (!showOverlay) {
       // Re-draw when enabling
-      drawBoundingBoxes(currentMetadata);
+      const frame = getCurrentFrame();
+      const frameAnomalies = anomaliesByFrameRef.current.get(frame) || [];
+      drawBoundingBoxes(frameAnomalies);
     } else {
       // Clear when disabling
       const canvas = canvasRef.current;
@@ -364,6 +383,13 @@ const OptimizedVideoStream = ({ cameraId }) => {
     }
   };
 
+  const changePlaybackRate = (rate) => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+      setPlaybackRate(rate);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Video Container */}
@@ -372,7 +398,7 @@ const OptimizedVideoStream = ({ cameraId }) => {
           {/* Video Element */}
           <video
             ref={videoRef}
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full object-contain"
             playsInline
             controls={false}
           >
@@ -417,6 +443,30 @@ const OptimizedVideoStream = ({ cameraId }) => {
                 Frame: {currentFrame}
               </div>
 
+              {/* Playback Speed */}
+              <div className="relative group/speed">
+                <button className="px-3 py-1.5 text-sm hover:bg-cosmic-purple/20 rounded-lg transition-colors text-white">
+                  {playbackRate}x
+                </button>
+                <div className="absolute bottom-full left-0 mb-2 bg-cosmic-deep border border-cosmic-purple-light/30 rounded-lg p-2 opacity-0 group-hover/speed:opacity-100 transition-opacity pointer-events-none group-hover/speed:pointer-events-auto shadow-lg">
+                  <div className="flex flex-col gap-1 min-w-[80px]">
+                    {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                      <button
+                        key={rate}
+                        onClick={() => changePlaybackRate(rate)}
+                        className={`px-3 py-1.5 text-sm rounded transition-colors text-left ${
+                          playbackRate === rate
+                            ? "bg-cosmic-purple text-white"
+                            : "text-cosmic-text hover:bg-cosmic-purple/20"
+                        }`}
+                      >
+                        {rate}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex-1"></div>
 
               {/* Overlay Toggle */}
@@ -448,11 +498,13 @@ const OptimizedVideoStream = ({ cameraId }) => {
 
           {/* Overlay Status */}
           <div className="absolute top-4 right-4">
-            {showOverlay && currentMetadata.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-cosmic-purple/80 backdrop-blur-sm border border-cosmic-purple-light/30 text-white text-xs font-medium">
-                {currentMetadata.length} Detection(s)
-              </div>
-            )}
+            {showOverlay &&
+              anomaliesByFrameRef.current.get(currentFrame)?.length > 0 && (
+                <div className="px-3 py-1.5 rounded-full bg-cosmic-purple/80 backdrop-blur-sm border border-cosmic-purple-light/30 text-white text-xs font-medium">
+                  {anomaliesByFrameRef.current.get(currentFrame).length}{" "}
+                  Detection(s)
+                </div>
+              )}
           </div>
         </div>
       </div>
