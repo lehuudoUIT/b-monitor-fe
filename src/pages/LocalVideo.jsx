@@ -64,7 +64,7 @@ const LocalVideo = () => {
   const stats = {
     total: pagination.total,
     ready: videos.filter((v) => v.status === "active").length,
-    processing: videos.filter((v) => v.status === "processing").length,
+    processing: videos.filter((v) => v.status !== "active").length,
   };
 
   return (
