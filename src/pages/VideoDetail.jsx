@@ -7,6 +7,7 @@ import {
   Calendar,
   Activity,
   Clock,
+  Trash2,
 } from "lucide-react";
 import OptimizedVideoStream from "../components/OptimizedVideoStream";
 import AnomalyPanel from "../components/AnomalyPanel";
@@ -19,6 +20,8 @@ const VideoDetail = () => {
   const navigate = useNavigate();
   const [videoInfo, setVideoInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadVideoInfo = async () => {
@@ -35,6 +38,19 @@ const VideoDetail = () => {
 
     loadVideoInfo();
   }, [videoId]);
+
+  const handleDeleteVideo = async () => {
+    setIsDeleting(true);
+    try {
+      await videoAPI.deleteVideo(videoId);
+      navigate("/local-video");
+    } catch (error) {
+      console.error("Failed to delete video:", error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -90,7 +106,15 @@ const VideoDetail = () => {
               {format(new Date(videoInfo.created_at), "MMM dd, yyyy")}
             </div>
           </div>
-        </div>
+        </div>{" "}
+        <Button
+          variant="outline"
+          onClick={() => setShowDeleteModal(true)}
+          className="hover:bg-red-500/10 hover:border-red-500 hover:text-red-500 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete
+        </Button>
       </div>
 
       {/* Video Info Cards */}
@@ -186,6 +210,66 @@ const VideoDetail = () => {
           <AnomalyPanel cameraId={videoId} />
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="cosmic-card max-w-md w-full p-6 space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-cosmic-text">
+                  Xóa Video
+                </h3>
+                <p className="text-sm text-cosmic-text-dim">
+                  Bạn có chắc chắn muốn xóa video này?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-cosmic-card-dark rounded-lg p-4 border border-cosmic-border">
+              <p className="text-sm text-cosmic-text-dim mb-2">
+                Video sẽ bị xóa:
+              </p>
+              <p className="text-cosmic-text font-semibold">{videoInfo.name}</p>
+            </div>
+
+            <p className="text-sm text-red-400">
+              ⚠️ Hành động này không thể hoàn tác!
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="flex-1"
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleDeleteVideo}
+                disabled={isDeleting}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white border-red-500"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Xóa
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -78,4 +78,19 @@ export const videoAPI = {
       throw error;
     }
   },
+
+  // Delete video
+  deleteVideo: async (cameraId) => {
+    try {
+      const response = await axiosInstance.delete(`/cameras/${cameraId}`);
+      toast.success('Xóa video thành công');
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Xóa video thất bại';
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
 }
