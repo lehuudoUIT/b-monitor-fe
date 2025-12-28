@@ -7,6 +7,11 @@ const CameraCard = ({ camera }) => {
   const isOnline = status === "online";
   const navigate = useNavigate();
 
+  // Default thumbnail if empty
+  const defaultThumbnail =
+    "https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=400&h=300&fit=crop";
+  const thumbnailUrl = thumbnail || defaultThumbnail;
+
   const handleCardClick = () => {
     navigate(`/camera/${id}`);
   };
@@ -19,7 +24,7 @@ const CameraCard = ({ camera }) => {
       {/* Thumbnail Image */}
       <div className="relative h-48 bg-cosmic-darker overflow-hidden">
         <img
-          src={thumbnail}
+          src={thumbnailUrl}
           alt={name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
