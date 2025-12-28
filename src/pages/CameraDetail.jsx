@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Share2, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Share2, Edit, Trash2 } from "lucide-react";
 import CameraStream from "../components/CameraStream";
 import AnomalyPanel from "../components/AnomalyPanel";
+import UpdateCameraModal from "../components/UpdateCameraModal";
 import Button from "../components/Button";
 import { cameraAPI } from "../api/cameraService";
 import { videoAPI } from "../api/videoService";
@@ -16,6 +17,7 @@ const CameraDetail = () => {
   const [anomalies, setAnomalies] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Load camera data
   useEffect(() => {
@@ -44,6 +46,16 @@ const CameraDetail = () => {
 
     loadCameraData();
   }, [cameraId]);
+
+  const handleUpdateCamera = async (updatedData) => {
+    try {
+      const updated = await cameraAPI.updateCamera(cameraId, updatedData);
+      setCamera(updated);
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error("Failed to update camera:", error);
+    }
+  };
 
   const handleDeleteCamera = async () => {
     setIsDeleting(true);
@@ -122,13 +134,13 @@ const CameraDetail = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Share2 className="w-4 h-4" />
-              Share
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4" />
-              Export
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUpdateModal(true)}
+            >
+              <Edit className="w-4 h-4" />
+              Edit
             </Button>
             <Button
               variant="outline"
@@ -186,6 +198,14 @@ const CameraDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Update Camera Modal */}
+      <UpdateCameraModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        onSuccess={handleUpdateCamera}
+        camera={camera}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

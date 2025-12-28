@@ -51,6 +51,21 @@ export const videoAPI = {
     }
   },
 
+  // Update video
+  updateVideo: async (videoId, videoData) => {
+    try {
+      const response = await axiosInstance.put(`/cameras/${videoId}`, videoData);
+      toast.success('Cập nhật video thành công');
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Cập nhật video thất bại';
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
 
   // Get frame metadata
   getFrameMetadata: async (frameId, cameraId) => {

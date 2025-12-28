@@ -8,9 +8,11 @@ import {
   Activity,
   Clock,
   Trash2,
+  Edit,
 } from "lucide-react";
 import OptimizedVideoStream from "../components/OptimizedVideoStream";
 import AnomalyPanel from "../components/AnomalyPanel";
+import UpdateVideoModal from "../components/UpdateVideoModal";
 import Button from "../components/Button";
 import { videoAPI } from "../api/videoService";
 import { format } from "date-fns";
@@ -22,6 +24,7 @@ const VideoDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   useEffect(() => {
     const loadVideoInfo = async () => {
@@ -38,6 +41,16 @@ const VideoDetail = () => {
 
     loadVideoInfo();
   }, [videoId]);
+
+  const handleUpdateVideo = async (updatedData) => {
+    try {
+      const updated = await videoAPI.updateVideo(videoId, updatedData);
+      setVideoInfo(updated);
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error("Failed to update video:", error);
+    }
+  };
 
   const handleDeleteVideo = async () => {
     setIsDeleting(true);
@@ -107,6 +120,10 @@ const VideoDetail = () => {
             </div>
           </div>
         </div>{" "}
+        <Button variant="outline" onClick={() => setShowUpdateModal(true)}>
+          <Edit className="w-4 h-4" />
+          Edit
+        </Button>
         <Button
           variant="outline"
           onClick={() => setShowDeleteModal(true)}
@@ -210,6 +227,14 @@ const VideoDetail = () => {
           <AnomalyPanel cameraId={videoId} />
         </div>
       </div>
+
+      {/* Update Video Modal */}
+      <UpdateVideoModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        onSuccess={handleUpdateVideo}
+        video={videoInfo}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

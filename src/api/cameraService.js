@@ -47,6 +47,21 @@ export const cameraAPI = {
     }
   },
 
+  // Update camera
+  updateCamera: async (cameraId, cameraData) => {
+    try {
+      const response = await axiosInstance.put(`/cameras/${cameraId}`, cameraData);
+      toast.success('Cập nhật camera thành công');
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Cập nhật camera thất bại';
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+
   // Delete camera
   deleteCamera: async (cameraId) => {
     try {
