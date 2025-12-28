@@ -1,9 +1,67 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Video, Wifi, AlertTriangle, TrendingUp } from "lucide-react";
 import CameraCard from "../components/CameraCard";
-import { mockCameras, dashboardStats } from "../data/mockData";
+import AddCameraModal from "../components/AddCameraModal";
+import { cameraAPI } from "../api/cameraService";
 
 const Dashboard = () => {
+  const [cameras, setCameras] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [stats, setStats] = useState({
+    totalCameras: 0,
+    onlineCameras: 0,
+    offlineCameras: 0,
+    alerts: 0,
+  });
+
+  // Load cameras from API
+  useEffect(() => {
+    loadCameras();
+  }, []);
+
+  const loadCameras = async () => {
+    setIsLoading(true);
+    try {
+      const data = await cameraAPI.getAllCameras({ skip: 0, limit: 100 });
+      setCameras(data.items || []);
+
+      // Calculate stats
+      const total = data.items?.length || 0;
+      const online =
+        data.items?.filter((c) => c.status === "active")?.length || 0;
+      const offline = total - online;
+
+      setStats({
+        totalCameras: total,
+        onlineCameras: online,
+        offlineCameras: offline,
+        alerts: 0, // This would come from anomaly API
+      });
+    } catch (error) {
+      console.error("Failed to load cameras:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateCamera = async (cameraData) => {
+    await cameraAPI.createCamera(cameraData);
+    // Reload cameras after creating
+    await loadCameras();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-cosmic-purple/30 border-t-cosmic-purple rounded-full animate-spin mx-auto"></div>
+          <p className="text-cosmic-text-dim">Loading cameras...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -17,7 +75,10 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <button className="cosmic-btn bg-gradient-to-r from-cosmic-purple to-cosmic-purple-dark text-white hover:shadow-glow-purple border border-cosmic-purple-light/50">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="cosmic-btn bg-gradient-to-r from-cosmic-purple to-cosmic-purple-dark text-white hover:shadow-glow-purple border border-cosmic-purple-light/50"
+        >
           <Video className="w-5 h-5" />
           Add Camera
         </button>
@@ -36,7 +97,7 @@ const Dashboard = () => {
             </span>
           </div>
           <h3 className="text-3xl font-bold text-cosmic-text mb-1">
-            {dashboardStats.totalCameras}
+            {stats.totalCameras}
           </h3>
           <p className="text-sm text-cosmic-text-dim">Total Cameras</p>
         </div>
@@ -52,7 +113,7 @@ const Dashboard = () => {
             </span>
           </div>
           <h3 className="text-3xl font-bold text-cosmic-text mb-1">
-            {dashboardStats.onlineCameras}
+            {stats.onlineCameras}
           </h3>
           <p className="text-sm text-cosmic-text-dim">Online Cameras</p>
         </div>
@@ -68,7 +129,7 @@ const Dashboard = () => {
             </span>
           </div>
           <h3 className="text-3xl font-bold text-cosmic-text mb-1">
-            {dashboardStats.offlineCameras}
+            {stats.offlineCameras}
           </h3>
           <p className="text-sm text-cosmic-text-dim">Offline Cameras</p>
         </div>
@@ -84,7 +145,7 @@ const Dashboard = () => {
             </span>
           </div>
           <h3 className="text-3xl font-bold text-cosmic-text mb-1">
-            {dashboardStats.alerts}
+            {stats.alerts}
           </h3>
           <p className="text-sm text-cosmic-text-dim">Active Alerts</p>
         </div>
@@ -97,20 +158,20 @@ const Dashboard = () => {
             All Cameras
           </h2>
           <div className="flex items-center gap-2 text-sm text-cosmic-text-dim">
-            <span>Showing {mockCameras.length} cameras</span>
+            <span>Showing {cameras.length} cameras</span>
           </div>
         </div>
 
         {/* Camera Cards Grid - 3 columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockCameras.map((camera) => (
+          {cameras.map((camera) => (
             <CameraCard key={camera.id} camera={camera} />
           ))}
         </div>
       </div>
 
       {/* Empty State (if no cameras) */}
-      {mockCameras.length === 0 && (
+      {cameras.length === 0 && (
         <div className="cosmic-card p-12 text-center">
           <div className="w-20 h-20 rounded-full bg-cosmic-purple/20 flex items-center justify-center mx-auto mb-4">
             <Video className="w-10 h-10 text-cosmic-purple" />
@@ -121,12 +182,22 @@ const Dashboard = () => {
           <p className="text-cosmic-text-dim mb-6">
             Get started by adding your first traffic camera
           </p>
-          <button className="cosmic-btn bg-gradient-to-r from-cosmic-purple to-cosmic-purple-dark text-white hover:shadow-glow-purple border border-cosmic-purple-light/50">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="cosmic-btn bg-gradient-to-r from-cosmic-purple to-cosmic-purple-dark text-white hover:shadow-glow-purple border border-cosmic-purple-light/50"
+          >
             <Video className="w-5 h-5" />
             Add Your First Camera
           </button>
         </div>
       )}
+
+      {/* Add Camera Modal */}
+      <AddCameraModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={handleCreateCamera}
+      />
     </div>
   );
 };
