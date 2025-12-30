@@ -15,6 +15,8 @@ import CameraDetail from "./pages/CameraDetail";
 import Analytics from "./pages/Analytics";
 import LocalVideo from "./pages/LocalVideo";
 import VideoDetail from "./pages/VideoDetail";
+import LiveFeed from "./pages/LiveFeed";
+import Settings from "./pages/Settings";
 import MainLayout from "./layouts/MainLayout";
 import "./App.css";
 
@@ -98,14 +100,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="flex items-center justify-center h-96">
-                      <div className="text-center">
-                        <h2 className="text-2xl font-bold text-gradient-cyan mb-2">
-                          Live Feed
-                        </h2>
-                        <p className="text-cosmic-text-dim">Coming soon...</p>
-                      </div>
-                    </div>
+                    <LiveFeed />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -116,14 +111,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="flex items-center justify-center h-96">
-                      <div className="text-center">
-                        <h2 className="text-2xl font-bold text-gradient-purple mb-2">
-                          Settings
-                        </h2>
-                        <p className="text-cosmic-text-dim">Coming soon...</p>
-                      </div>
-                    </div>
+                    <Settings />
                   </MainLayout>
                 </ProtectedRoute>
               }
