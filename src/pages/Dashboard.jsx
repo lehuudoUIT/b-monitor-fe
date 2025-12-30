@@ -8,6 +8,11 @@ const Dashboard = () => {
   const [cameras, setCameras] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [pagination, setPagination] = useState({
+    skip: 0,
+    limit: 9,
+    total: 0,
+  });
   const [stats, setStats] = useState({
     totalCameras: 0,
     onlineCameras: 0,
@@ -18,22 +23,30 @@ const Dashboard = () => {
   // Load cameras from API
   useEffect(() => {
     loadCameras();
-  }, []);
+  }, [pagination.skip]);
 
   const loadCameras = async () => {
     setIsLoading(true);
     try {
-      const data = await cameraAPI.getAllCameras({ skip: 0, limit: 100 });
+      const data = await cameraAPI.getAllCameras({
+        skip: pagination.skip,
+        limit: pagination.limit,
+      });
       setCameras(data.items || []);
 
-      // Calculate stats
-      const total = data.items?.length || 0;
+      // Update pagination total
+      setPagination((prev) => ({
+        ...prev,
+        total: data.total || 0,
+      }));
+
+      // Calculate stats from total
       const online =
         data.items?.filter((c) => c.status === "active")?.length || 0;
-      const offline = total - online;
+      const offline = (data.items?.length || 0) - online;
 
       setStats({
-        totalCameras: total,
+        totalCameras: data.total || 0,
         onlineCameras: online,
         offlineCameras: offline,
         alerts: 0, // This would come from anomaly API
@@ -47,7 +60,8 @@ const Dashboard = () => {
 
   const handleCreateCamera = async (cameraData) => {
     await cameraAPI.createCamera(cameraData);
-    // Reload cameras after creating
+    // Reset to first page and reload
+    setPagination((prev) => ({ ...prev, skip: 0 }));
     await loadCameras();
   };
 
@@ -188,6 +202,48 @@ const Dashboard = () => {
           >
             <Video className="w-5 h-5" />
             Add Your First Camera
+          </button>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {cameras.length > 0 && pagination.total > pagination.limit && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                skip: Math.max(0, prev.skip - prev.limit),
+              }))
+            }
+            disabled={pagination.skip === 0}
+            className={`px-4 py-2 rounded-lg border transition-all ${
+              pagination.skip === 0
+                ? "border-cosmic-border bg-cosmic-card-dark text-cosmic-text-dim cursor-not-allowed"
+                : "border-cosmic-purple bg-cosmic-card hover:bg-cosmic-purple/10 text-cosmic-text"
+            }`}
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-cosmic-text-dim">
+            Page {Math.floor(pagination.skip / pagination.limit) + 1} of{" "}
+            {Math.ceil(pagination.total / pagination.limit)}
+          </span>
+          <button
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                skip: prev.skip + prev.limit,
+              }))
+            }
+            disabled={pagination.skip + pagination.limit >= pagination.total}
+            className={`px-4 py-2 rounded-lg border transition-all ${
+              pagination.skip + pagination.limit >= pagination.total
+                ? "border-cosmic-border bg-cosmic-card-dark text-cosmic-text-dim cursor-not-allowed"
+                : "border-cosmic-purple bg-cosmic-card hover:bg-cosmic-purple/10 text-cosmic-text"
+            }`}
+          >
+            Next
           </button>
         </div>
       )}

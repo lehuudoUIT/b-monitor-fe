@@ -11,7 +11,7 @@ const LocalVideo = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     skip: 0,
-    limit: 12,
+    limit: 9,
     total: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
@@ -208,8 +208,7 @@ const LocalVideo = () => {
         filteredVideos.length > 0 &&
         pagination.total > pagination.limit && (
           <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
+            <button
               onClick={() =>
                 setPagination((prev) => ({
                   ...prev,
@@ -217,15 +216,19 @@ const LocalVideo = () => {
                 }))
               }
               disabled={pagination.skip === 0}
+              className={`px-4 py-2 rounded-lg border transition-all ${
+                pagination.skip === 0
+                  ? "border-cosmic-border bg-cosmic-card-dark text-cosmic-text-dim cursor-not-allowed"
+                  : "border-cosmic-purple bg-cosmic-card hover:bg-cosmic-purple/10 text-cosmic-text"
+              }`}
             >
               Previous
-            </Button>
+            </button>
             <span className="px-4 py-2 text-cosmic-text-dim">
               Page {Math.floor(pagination.skip / pagination.limit) + 1} of{" "}
               {Math.ceil(pagination.total / pagination.limit)}
             </span>
-            <Button
-              variant="outline"
+            <button
               onClick={() =>
                 setPagination((prev) => ({
                   ...prev,
@@ -233,9 +236,14 @@ const LocalVideo = () => {
                 }))
               }
               disabled={pagination.skip + pagination.limit >= pagination.total}
+              className={`px-4 py-2 rounded-lg border transition-all ${
+                pagination.skip + pagination.limit >= pagination.total
+                  ? "border-cosmic-border bg-cosmic-card-dark text-cosmic-text-dim cursor-not-allowed"
+                  : "border-cosmic-purple bg-cosmic-card hover:bg-cosmic-purple/10 text-cosmic-text"
+              }`}
             >
               Next
-            </Button>
+            </button>
           </div>
         )}
 
