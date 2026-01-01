@@ -35,7 +35,7 @@ export const videoAPI = {
   // Upload video
   uploadVideo: async (formData) => {
     try {
-      const response = await axiosInstance.post('/cameras/upload-video', formData, {
+      const response = await axiosInstance.post('/cameras/upload-video-v2', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
